@@ -1,304 +1,302 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>Álgebra en RA</title>
-
-  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: 'Share Tech Mono', monospace;
+    /* ═══════════════════════════════════════════════
+       BASE — sin scroll, sin overflow, fondo negro
+    ═══════════════════════════════════════════════ */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{
+      width:100%;height:100%;overflow:hidden;
+      background:#000;
+      font-family:'Share Tech Mono',monospace;
+      touch-action:none;
     }
 
-    /* A-SCENE ocupa todo el viewport */
-    a-scene {
-      position: fixed !important;
-      top: 0 !important; left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 0 !important;
+    /* ═══════════════════════════════════════════════
+       CÁMARA — video ocupa TODO el viewport
+       object-fit:cover → sin franjas negras
+    ═══════════════════════════════════════════════ */
+    #cam-video{
+      position:fixed;top:0;left:0;
+      width:100vw;height:100vh;
+      object-fit:cover;
+      z-index:0;
+      background:#000;
     }
 
-    /* VIDEO y CANVAS: fondo completo, nunca recortado */
-    video, canvas {
-      position: fixed !important;
-      top: 0 !important; left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;
-      z-index: -1 !important;
+    /* ═══════════════════════════════════════════════
+       CANVAS Three.js — encima del video, transparente
+    ═══════════════════════════════════════════════ */
+    #three-canvas{
+      position:fixed;top:0;left:0;
+      width:100vw;height:100vh;
+      z-index:1;
+      pointer-events:none;
     }
 
-    /* HUD encima de todo */
-    #hud {
-      position: fixed; inset: 0; z-index: 10;
-      display: flex; flex-direction: column;
-      justify-content: flex-end;
-      pointer-events: none;
+    /* ═══════════════════════════════════════════════
+       HUD — encima de todo
+    ═══════════════════════════════════════════════ */
+    #hud{
+      position:fixed;inset:0;
+      z-index:10;pointer-events:none;
+      display:flex;flex-direction:column;justify-content:flex-end;
     }
 
-    /* Score bar */
-    #score-bar {
-      position: fixed; top: 0; left: 0; right: 0;
-      padding: 8px 16px 6px;
-      display: flex; justify-content: space-between; align-items: center;
-      background: linear-gradient(180deg,rgba(0,0,0,0.78) 0%,transparent 100%);
-      z-index: 11;
+    /* — Score bar — */
+    #score-bar{
+      position:fixed;top:0;left:0;right:0;
+      padding:8px 16px 6px;
+      display:flex;justify-content:space-between;align-items:center;
+      background:linear-gradient(180deg,rgba(0,0,0,.82) 0%,transparent 100%);
+      z-index:11;
     }
-    #score-bar .lbl {
-      font-family:'Orbitron',monospace; font-size:10px;
-      letter-spacing:2px; color:#00ff9d66; text-transform:uppercase;
+    #score-bar .lbl{
+      font-family:'Orbitron',monospace;font-size:10px;
+      letter-spacing:2px;color:#00ff9d66;text-transform:uppercase;
     }
-    #score-display {
-      font-family:'Orbitron',monospace; font-size:20px;
-      letter-spacing:4px; color:#00ff9d;
-      text-shadow:0 0 10px #00ff9d, 0 0 24px #00ff9d88;
+    #score-display{
+      font-family:'Orbitron',monospace;font-size:20px;
+      letter-spacing:4px;color:#00ff9d;
+      text-shadow:0 0 10px #00ff9d,0 0 24px #00ff9d88;
     }
-    #q-counter {
-      font-family:'Orbitron',monospace; font-size:10px;
-      letter-spacing:2px; color:#00d4ff88;
+    #q-counter{
+      font-family:'Orbitron',monospace;font-size:10px;
+      letter-spacing:2px;color:#00d4ff88;
     }
 
-    /* Flash */
-    #flash {
-      position:fixed; inset:0; pointer-events:none; z-index:9;
-      opacity:0; transition:opacity .1s;
+    /* — Flash de respuesta — */
+    #flash{
+      position:fixed;inset:0;pointer-events:none;z-index:9;
+      opacity:0;transition:opacity .1s;
     }
-    #flash.green { background:rgba(0,255,100,.22); opacity:1; }
-    #flash.red   { background:rgba(255,30,30,.26);  opacity:1; }
-    #flash.fade  { opacity:0; }
+    #flash.green{background:rgba(0,255,100,.22);opacity:1;}
+    #flash.red  {background:rgba(255,30,30,.26); opacity:1;}
+    #flash.fade {opacity:0;}
 
-    /* Borde neon */
-    #neon-border {
-      position:fixed; inset:0; pointer-events:none; z-index:8;
+    /* — Borde neón — */
+    #neon-border{
+      position:fixed;inset:0;pointer-events:none;z-index:8;
       border:4px solid transparent;
-      transition:border-color .15s, box-shadow .15s;
+      transition:border-color .15s,box-shadow .15s;
     }
-    #neon-border.green {
+    #neon-border.green{
       border-color:#00ff64;
-      box-shadow:inset 0 0 24px #00ff6444, 0 0 24px #00ff6444;
+      box-shadow:inset 0 0 24px #00ff6444,0 0 24px #00ff6444;
     }
-    #neon-border.red {
+    #neon-border.red{
       border-color:#ff2222;
-      box-shadow:inset 0 0 24px #ff222244, 0 0 24px #ff222244;
+      box-shadow:inset 0 0 24px #ff222244,0 0 24px #ff222244;
     }
 
-    /* Panel de botones - mas delgados para mas espacio visual */
-    #options-panel {
+    /* — Panel de botones — */
+    #options-panel{
       pointer-events:all;
-      padding:0 12px 16px;
-      display:flex; flex-direction:column; gap:7px;
+      padding:0 12px 14px;
+      display:flex;flex-direction:column;gap:6px;
     }
-    .hint-lbl {
-      text-align:center; font-size:9px; letter-spacing:3px;
-      color:#00d4ff55; margin-bottom:2px; text-transform:uppercase;
+    .hint-lbl{
+      text-align:center;font-size:9px;letter-spacing:3px;
+      color:#00d4ff55;margin-bottom:2px;text-transform:uppercase;
     }
-    .opt-btn {
-      width:100%; padding:11px 10px;
-      border:1.5px solid #00ff9d44; border-radius:6px;
-      background:rgba(0,0,0,0.74); color:#00ff9d;
-      font-family:'Share Tech Mono',monospace; font-size:16px;
-      letter-spacing:2px; cursor:pointer;
-      backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
-      transition:background .15s, border-color .15s, box-shadow .15s, transform .1s;
+    /* Botones más delgados: padding reducido a 9px */
+    .opt-btn{
+      width:100%;padding:9px 10px;
+      border:1.5px solid #00ff9d44;border-radius:6px;
+      background:rgba(0,0,0,.76);color:#00ff9d;
+      font-family:'Share Tech Mono',monospace;font-size:15px;
+      letter-spacing:2px;cursor:pointer;
+      backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+      transition:background .15s,border-color .15s,box-shadow .15s,transform .1s;
       text-align:center;
     }
-    .opt-btn:active  { transform:scale(.97); }
-    .opt-btn:hover   { background:rgba(0,255,157,.11); border-color:#00ff9d; box-shadow:0 0 12px #00ff9d44; }
-    .opt-btn.correct { background:rgba(0,255,100,.24); border-color:#00ff64; box-shadow:0 0 18px #00ff6488; color:#fff; }
-    .opt-btn.wrong   { background:rgba(255,30,30,.22); border-color:#ff2222; box-shadow:0 0 14px #ff222266; color:#ff8888; }
-    .opt-btn:disabled { cursor:default; }
+    .opt-btn:active {transform:scale(.97);}
+    .opt-btn:hover  {background:rgba(0,255,157,.11);border-color:#00ff9d;box-shadow:0 0 12px #00ff9d44;}
+    .opt-btn.correct{background:rgba(0,255,100,.24);border-color:#00ff64;box-shadow:0 0 18px #00ff6488;color:#fff;}
+    .opt-btn.wrong  {background:rgba(255,30,30,.22); border-color:#ff2222;box-shadow:0 0 14px #ff222266;color:#ff8888;}
+    .opt-btn:disabled{cursor:default;}
 
-    /* Hint marcador */
-    #marker-hint {
-      position:fixed; top:50%; left:50%;
+    /* — Hint de superficie — */
+    #surface-hint{
+      position:fixed;top:50%;left:50%;
       transform:translate(-50%,-50%);
-      text-align:center; color:#00ff9d55;
-      font-size:11px; letter-spacing:2px;
-      pointer-events:none; z-index:5; text-transform:uppercase;
+      text-align:center;pointer-events:none;
+      z-index:12;transition:opacity .4s;
     }
-    #marker-hint .ring {
-      width:56px; height:56px;
-      border:2px solid #00ff9d33; border-radius:50%;
-      margin:0 auto 8px;
-      display:flex; align-items:center; justify-content:center;
+    #surface-hint .ring{
+      width:64px;height:64px;
+      border:2px solid #00ff9d55;border-radius:50%;
+      margin:0 auto 10px;
+      display:flex;align-items:center;justify-content:center;
       animation:pulse 2s infinite;
     }
-    @keyframes pulse {
-      0%,100%{opacity:.35;transform:scale(1);}
-      50%{opacity:1;transform:scale(1.1);}
+    #surface-hint .ring-txt{
+      font-family:'Orbitron',monospace;font-size:10px;
+      letter-spacing:3px;color:#00ff9d88;text-transform:uppercase;
+      line-height:1.6;
+    }
+    #surface-hint.detected .ring{
+      border-color:#00ff9dcc;
+      box-shadow:0 0 18px #00ff9d55;
+    }
+    #surface-hint.detected .ring-txt{
+      color:#00ff9d;
+      text-shadow:0 0 8px #00ff9d;
+    }
+    @keyframes pulse{
+      0%,100%{opacity:.4;transform:scale(1);}
+      50%     {opacity:1; transform:scale(1.08);}
     }
 
-    /* Popup de solucion */
-    #solution-popup {
-      display:none; position:fixed; left:50%; top:50%;
+    /* — Reticle (punto de anclaje en pantalla) — */
+    #reticle{
+      position:fixed;top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      width:44px;height:44px;
+      pointer-events:none;z-index:13;
+      opacity:0;transition:opacity .3s;
+    }
+    #reticle.show{opacity:1;}
+
+    /* — Botón "Tocar para colocar" — */
+    #place-btn{
+      position:fixed;bottom:190px;left:50%;
+      transform:translateX(-50%);
+      padding:10px 24px;
+      background:rgba(0,0,0,.78);
+      border:1.5px solid #00d4ff;border-radius:30px;
+      color:#00d4ff;font-family:'Orbitron',monospace;
+      font-size:11px;letter-spacing:2px;
+      cursor:pointer;pointer-events:all;z-index:14;
+      display:none;text-transform:uppercase;
+      transition:box-shadow .2s;
+    }
+    #place-btn.show{display:block;}
+    #place-btn:hover{box-shadow:0 0 16px #00d4ff66;}
+
+    /* — Popup de solución — */
+    #solution-popup{
+      display:none;position:fixed;left:50%;top:45%;
       transform:translate(-50%,-50%) scale(.88);
       width:min(92vw,370px);
       background:rgba(4,12,20,.97);
-      border:1.5px solid #00d4ff66; border-radius:12px;
-      padding:20px 18px 16px; z-index:20; pointer-events:all;
+      border:1.5px solid #00d4ff66;border-radius:12px;
+      padding:18px 16px 14px;z-index:20;pointer-events:all;
       box-shadow:0 0 36px #00d4ff33;
       animation:popIn .22s cubic-bezier(.34,1.56,.64,1) forwards;
     }
-    @keyframes popIn {
+    @keyframes popIn{
       from{opacity:0;transform:translate(-50%,-50%) scale(.82);}
-      to{opacity:1;transform:translate(-50%,-50%) scale(1);}
+      to  {opacity:1;transform:translate(-50%,-50%) scale(1);}
     }
-    #solution-popup.visible { display:block; }
+    #solution-popup.visible{display:block;}
 
-    .popup-badge {
-      display:inline-block; font-family:'Orbitron',monospace;
-      font-size:10px; letter-spacing:3px; padding:3px 10px;
-      border-radius:20px; margin-bottom:10px; text-transform:uppercase;
+    .popup-badge{
+      display:inline-block;font-family:'Orbitron',monospace;
+      font-size:10px;letter-spacing:3px;padding:3px 10px;
+      border-radius:20px;margin-bottom:9px;text-transform:uppercase;
     }
-    .popup-badge.correct { background:#00ff6420; color:#00ff64; border:1px solid #00ff6455; }
-    .popup-badge.wrong   { background:#ff222220; color:#ff4444; border:1px solid #ff222255; }
-
-    .popup-title {
-      font-family:'Orbitron',monospace; font-size:12px;
-      color:#00d4ff; letter-spacing:2px; margin-bottom:12px;
+    .popup-badge.correct{background:#00ff6420;color:#00ff64;border:1px solid #00ff6455;}
+    .popup-badge.wrong  {background:#ff222220;color:#ff4444;border:1px solid #ff222255;}
+    .popup-title{
+      font-family:'Orbitron',monospace;font-size:11px;
+      color:#00d4ff;letter-spacing:2px;margin-bottom:10px;
       text-shadow:0 0 8px #00d4ff88;
     }
-    .popup-eq {
-      font-family:'Orbitron',monospace; font-size:15px;
-      color:#00ff9d; text-align:center; margin-bottom:12px;
-      text-shadow:0 0 8px #00ff9d88; letter-spacing:2px;
+    .popup-eq{
+      font-family:'Orbitron',monospace;font-size:14px;
+      color:#00ff9d;text-align:center;margin-bottom:10px;
+      text-shadow:0 0 8px #00ff9d88;letter-spacing:2px;
     }
-    .step-list { list-style:none; display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
-    .step-list li { display:flex; align-items:flex-start; gap:9px; font-size:12px; color:#c8ffe8; line-height:1.5; }
-    .step-num {
-      flex-shrink:0; width:18px; height:18px; border-radius:50%;
-      background:#00d4ff22; border:1px solid #00d4ff55;
-      color:#00d4ff; font-size:9px;
-      display:flex; align-items:center; justify-content:center;
+    .step-list{list-style:none;display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+    .step-list li{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:#c8ffe8;line-height:1.5;}
+    .step-num{
+      flex-shrink:0;width:17px;height:17px;border-radius:50%;
+      background:#00d4ff22;border:1px solid #00d4ff55;
+      color:#00d4ff;font-size:8px;
+      display:flex;align-items:center;justify-content:center;
       font-family:'Orbitron',monospace;
     }
-    .step-text em { font-style:normal; color:#00ff9d; font-weight:bold; }
-
-    #next-btn {
-      width:100%; padding:12px;
+    .step-text em{font-style:normal;color:#00ff9d;font-weight:bold;}
+    #next-btn{
+      width:100%;padding:11px;
       background:linear-gradient(135deg,#00d4ff22,#00ff9d22);
-      border:1.5px solid #00d4ff; border-radius:7px;
-      color:#00d4ff; font-family:'Orbitron',monospace;
-      font-size:12px; letter-spacing:3px; cursor:pointer;
-      text-transform:uppercase; transition:background .15s,box-shadow .15s;
+      border:1.5px solid #00d4ff;border-radius:7px;
+      color:#00d4ff;font-family:'Orbitron',monospace;
+      font-size:11px;letter-spacing:3px;cursor:pointer;
+      text-transform:uppercase;transition:background .15s,box-shadow .15s;
     }
-    #next-btn:hover { background:linear-gradient(135deg,#00d4ff44,#00ff9d33); box-shadow:0 0 16px #00d4ff66; }
+    #next-btn:hover{background:linear-gradient(135deg,#00d4ff44,#00ff9d33);box-shadow:0 0 16px #00d4ff66;}
+
+    /* — Badge de modo (WebXR vs Orientación) — */
+    #mode-badge{
+      position:fixed;top:52px;right:12px;z-index:12;
+      font-family:'Orbitron',monospace;font-size:8px;
+      letter-spacing:1px;color:#00d4ff55;text-transform:uppercase;
+      pointer-events:none;
+    }
   </style>
 </head>
 <body>
 
-<!-- Componente canvas-text: ecuacion en canvas2D como textura 3D -->
-<script>
-AFRAME.registerComponent('canvas-text', {
-  schema: {
-    value:    { type:'string', default:'' },
-    color:    { type:'color',  default:'#00FF00' },
-    fontSize: { type:'int',   default:100 },
-    cw:       { type:'int',   default:1024 },
-    ch:       { type:'int',   default:256 }
-  },
-  init() {
-    this.canvas  = document.createElement('canvas');
-    this.ctx     = this.canvas.getContext('2d');
-    this.texture = new THREE.CanvasTexture(this.canvas);
-    const mat = new THREE.MeshBasicMaterial({
-      map:this.texture, transparent:true, depthWrite:false, side:THREE.DoubleSide
-    });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(4,1), mat);
-    this.el.setObject3D('mesh', this.mesh);
-    this.update();
-  },
-  update() {
-    const {value,color,fontSize,cw,ch} = this.data;
-    const cvs=this.canvas, ctx=this.ctx;
-    cvs.width=cw; cvs.height=ch;
-    ctx.clearRect(0,0,cw,ch);
-    const r=36;
-    ctx.fillStyle='rgba(0,0,0,0.62)';
-    ctx.beginPath();
-    ctx.moveTo(r,0); ctx.lineTo(cw-r,0);
-    ctx.quadraticCurveTo(cw,0,cw,r);
-    ctx.lineTo(cw,ch-r); ctx.quadraticCurveTo(cw,ch,cw-r,ch);
-    ctx.lineTo(r,ch);    ctx.quadraticCurveTo(0,ch,0,ch-r);
-    ctx.lineTo(0,r);     ctx.quadraticCurveTo(0,0,r,0);
-    ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=color; ctx.lineWidth=7;
-    ctx.shadowColor=color; ctx.shadowBlur=30;
-    ctx.stroke();
-    ctx.font=`bold ${fontSize}px monospace`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.shadowBlur=26; ctx.shadowColor=color; ctx.fillStyle=color;
-    ctx.fillText(value,cw/2,ch/2);
-    this.texture.needsUpdate=true;
-  },
-  remove() { this.el.removeObject3D('mesh'); }
-});
-</script>
+<!-- ════════════════════════════════════════════════════════
+     VIDEO: cámara trasera, pantalla completa
+════════════════════════════════════════════════════════ -->
+<video id="cam-video" autoplay playsinline muted></video>
 
-<!-- A-SCENE: embedded + alpha + antialias + sin logarithmicDepthBuffer -->
-<a-scene
-  embedded
-  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-  renderer="alpha: true; antialias: true; precision: medium;"
-  vr-mode-ui="enabled: false"
-  loading-screen="enabled: false"
->
-  <a-marker preset="hiro" id="hiro-marker">
-    <!--
-      position="0 0.2 0"    texto sentado sobre el marcador, no flotando muy alto
-      rotation="-90 0 0"    plano horizontal = se ve parado frente a la camara
-      scale="2.5 2.5 2.5"   tamano legible sin salirse del ancho del celular
-      color #00FF00 + MeshBasicMaterial = shader flat, brilla sin luces
-    -->
-    <a-entity
-      id="eq-text"
-      canvas-text="value: 7x - 4 = 23; color: #00FF00; fontSize: 100; cw: 1024; ch: 256"
-      position="0 0.2 0"
-      rotation="-90 0 0"
-      scale="2.5 2.5 2.5"
-    ></a-entity>
+<!-- ════════════════════════════════════════════════════════
+     CANVAS Three.js: renderizado 3D encima del video
+════════════════════════════════════════════════════════ -->
+<canvas id="three-canvas"></canvas>
 
-    <a-box position="0 0.01 0" width="4.5" height="0.03" depth="1.4"
-           color="#001a0d" opacity="0.85" material="shader:flat;"></a-box>
-    <a-box position="0 0.02 0" width="4.7" height="0.015" depth="1.5"
-           color="#00FF00" opacity="0.18" material="shader:flat;"></a-box>
-  </a-marker>
-
-  <a-entity camera></a-entity>
-</a-scene>
-
-<!-- HUD -->
+<!-- ════════════════════════════════════════════════════════
+     HUD
+════════════════════════════════════════════════════════ -->
 <div id="score-bar">
   <div>
     <div class="lbl">Score</div>
     <div id="score-display">000</div>
   </div>
-  <div id="q-counter">Q 1 / 8</div>
+  <div id="q-counter">Q 1 / ∞</div>
 </div>
 
 <div id="flash"></div>
 <div id="neon-border"></div>
+<div id="mode-badge">modo: init</div>
 
-<div id="marker-hint">
-  <div class="ring">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M10 2v3M10 15v3M2 10h3M15 10h3" stroke="#00ff9d" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
-  </div>
-  Apunta al marcador Hiro
+<!-- Reticle (anillo de anclaje visible en pantalla) -->
+<div id="reticle">
+  <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="22" cy="22" r="18" stroke="#00ff9d" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9"/>
+    <circle cx="22" cy="22" r="3"  fill="#00ff9d" opacity="0.9"/>
+    <line x1="22" y1="4"  x2="22" y2="11" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="22" y1="33" x2="22" y2="40" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="4"  y1="22" x2="11" y2="22" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="33" y1="22" x2="40" y2="22" stroke="#00ff9d" stroke-width="1.5"/>
+  </svg>
 </div>
 
+<!-- Hint de superficie -->
+<div id="surface-hint">
+  <div class="ring">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3l1.5 3h3l-2.5 2 1 3L12 9.5 9 11l1-3L7.5 6h3z" stroke="#00ff9d" stroke-width="1.2" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="ring-txt" id="hint-txt">BUSCA UNA<br>SUPERFICIE PLANA</div>
+</div>
+
+<!-- Botón colocar (aparece cuando hay superficie) -->
+<button id="place-btn" onclick="placeEquation()">⊕ &nbsp;Colocar aquí</button>
+
+<!-- Botones de respuesta -->
 <div id="hud">
-  <div id="options-panel">
+  <div id="options-panel" style="display:none;">
     <div class="hint-lbl">Selecciona la respuesta</div>
     <button class="opt-btn" id="btn0" onclick="checkAnswer(0)">-</button>
     <button class="opt-btn" id="btn1" onclick="checkAnswer(1)">-</button>
@@ -306,23 +304,32 @@ AFRAME.registerComponent('canvas-text', {
   </div>
 </div>
 
+<!-- Popup solución -->
 <div id="solution-popup">
   <span id="popup-badge" class="popup-badge correct">Correcto</span>
   <div class="popup-title">PROCEDIMIENTO PASO A PASO</div>
   <div class="popup-eq" id="popup-eq"></div>
   <ul class="step-list" id="step-list"></ul>
-  <button id="next-btn" onclick="nextQuestion()">Siguiente Ejercicio</button>
+  <button id="next-btn" onclick="nextQuestion()">▶ &nbsp;Siguiente Ejercicio</button>
 </div>
 
+<!-- ════════════════════════════════════════════════════════
+     Three.js desde CDN
+════════════════════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <script>
-function gcd(a,b){ return b===0?Math.abs(a):gcd(b,a%b); }
+/* ════════════════════════════════════════════════════════════
+   MOTOR DE EJERCICIOS (sin cambios respecto a tu código)
+════════════════════════════════════════════════════════════ */
+function gcd(a,b){return b===0?Math.abs(a):gcd(b,a%b);}
 function frac(num,den){
   if(den<0){num=-num;den=-den;}
   const g=gcd(Math.abs(num),den);
-  return {num:num/g,den:den/g};
+  return{num:num/g,den:den/g};
 }
-function fmt(f){ return f.den===1?String(f.num):`${f.num}/${f.den}`; }
-function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function fmt(f){return f.den===1?String(f.num):`${f.num}/${f.den}`;}
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
@@ -335,7 +342,7 @@ function genExercise(){
   let eq,ans,steps,label;
   if(type===0){
     const a=randInt(2,9),b=randInt(1,8),c=randInt(b+2,b+a*6);
-    eq=`${a}x + ${b} = ${c}`; ans=frac(c-b,a); label=fmt(ans);
+    eq=`${a}x + ${b} = ${c}`;ans=frac(c-b,a);label=fmt(ans);
     steps=[
       `Ecuacion: <em>${eq}</em>`,
       `Restamos ${b}: <em>${a}x = ${c-b}</em>`,
@@ -344,7 +351,7 @@ function genExercise(){
     ];
   } else if(type===1){
     const a=randInt(2,9),b=randInt(1,8),c=randInt(1,a*6);
-    eq=`${a}x - ${b} = ${c}`; ans=frac(c+b,a); label=fmt(ans);
+    eq=`${a}x - ${b} = ${c}`;ans=frac(c+b,a);label=fmt(ans);
     steps=[
       `Ecuacion: <em>${eq}</em>`,
       `Sumamos ${b}: <em>${a}x = ${c+b}</em>`,
@@ -353,7 +360,7 @@ function genExercise(){
     ];
   } else if(type===2){
     const a=randInt(2,9),c=randInt(1,a*7);
-    eq=`${a}x = ${c}`; ans=frac(c,a); label=fmt(ans);
+    eq=`${a}x = ${c}`;ans=frac(c,a);label=fmt(ans);
     steps=[
       `Ecuacion: <em>${eq}</em>`,
       `Dividimos entre ${a}`,
@@ -362,7 +369,7 @@ function genExercise(){
     ];
   } else {
     const a=randInt(2,6),b=randInt(1,5),c=randInt(b+2,b+8);
-    eq=`x/${a} + ${b} = ${c}`; const xv=a*(c-b); ans=frac(xv,1); label=String(xv);
+    eq=`x/${a} + ${b} = ${c}`;const xv=a*(c-b);ans=frac(xv,1);label=String(xv);
     steps=[
       `Ecuacion: <em>${eq}</em>`,
       `Restamos ${b}: <em>x/${a} = ${c-b}</em>`,
@@ -373,29 +380,316 @@ function genExercise(){
   const opts=[label];
   while(opts.length<3){
     const d=fmt(frac(ans.num+randInt(1,4)*(Math.random()<.5?1:-1)*ans.den,ans.den));
-    if(!opts.includes(d)) opts.push(d);
+    if(!opts.includes(d))opts.push(d);
   }
   shuffle(opts);
-  return {eq,ans,label,opts,correct:opts.indexOf(label),steps};
+  return{eq,ans,label,opts,correct:opts.indexOf(label),steps};
 }
 
+/* ════════════════════════════════════════════════════════════
+   ESTADO GLOBAL
+════════════════════════════════════════════════════════════ */
 let score=0,qNum=1,cur=null;
+let equationPlaced=false;   // si ya se colocó la ecuación
+let surfaceReady=false;      // si hay superficie detectada
 
-function loadQuestion(){
-  cur=genExercise();
-  const ent=document.querySelector('#eq-text');
-  const doSet=()=>ent.setAttribute('canvas-text','value',cur.eq);
-  if(ent.components&&ent.components['canvas-text']){ doSet(); }
-  else {
-    ent.addEventListener('componentinitialized',function h(e){
-      if(e.detail.name==='canvas-text'){doSet();ent.removeEventListener('componentinitialized',h);}
+/* ════════════════════════════════════════════════════════════
+   THREE.JS — ESCENA 3D
+════════════════════════════════════════════════════════════ */
+const canvas3d = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({canvas:canvas3d, alpha:true, antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0); // fondo transparente
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 100);
+camera.position.set(0, 1.5, 0); // posicion "ojo" aproximada
+
+/* — Grupo raíz del ejercicio — */
+const eqGroup = new THREE.Group();
+eqGroup.visible = false; // oculto hasta colocar
+scene.add(eqGroup);
+
+/* — Canvas2D para la ecuación (mismo componente que antes) — */
+const eqCanvas  = document.createElement('canvas');
+eqCanvas.width  = 1024;
+eqCanvas.height = 256;
+const eqCtx     = eqCanvas.getContext('2d');
+const eqTexture = new THREE.CanvasTexture(eqCanvas);
+
+const eqMat  = new THREE.MeshBasicMaterial({
+  map:eqTexture, transparent:true, depthWrite:false, side:THREE.DoubleSide
+});
+// PlaneGeometry 4:1 (mismo ratio que antes)
+const eqMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.07), eqMat);
+eqGroup.add(eqMesh);
+
+// Plataforma neón base
+const baseMat1 = new THREE.MeshBasicMaterial({color:0x001a0d,transparent:true,opacity:.85});
+const baseMat2 = new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.18});
+const base1 = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.003,0.10), baseMat1);
+const base2 = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.0015,0.11),baseMat2);
+base1.position.y = 0.001;
+base2.position.y = 0.002;
+eqGroup.add(base1,base2);
+
+/* Función que dibuja la ecuación en el canvas2D */
+function drawEquation(text){
+  const cw=1024,ch=256,ctx=eqCtx;
+  eqCanvas.width=cw;eqCanvas.height=ch;
+  ctx.clearRect(0,0,cw,ch);
+  // fondo redondeado
+  const r=36;
+  ctx.fillStyle='rgba(0,0,0,0.65)';
+  ctx.beginPath();
+  ctx.moveTo(r,0);ctx.lineTo(cw-r,0);
+  ctx.quadraticCurveTo(cw,0,cw,r);
+  ctx.lineTo(cw,ch-r);ctx.quadraticCurveTo(cw,ch,cw-r,ch);
+  ctx.lineTo(r,ch);ctx.quadraticCurveTo(0,ch,0,ch-r);
+  ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);
+  ctx.closePath();ctx.fill();
+  // borde neón
+  ctx.strokeStyle='#00FF00';ctx.lineWidth=7;
+  ctx.shadowColor='#00FF00';ctx.shadowBlur=30;
+  ctx.stroke();
+  // texto
+  ctx.font='bold 108px monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowBlur=26;ctx.shadowColor='#00FF00';ctx.fillStyle='#00FF00';
+  ctx.fillText(text,cw/2,ch/2);
+  eqTexture.needsUpdate=true;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CÁMARA TRASERA
+════════════════════════════════════════════════════════════ */
+const video = document.getElementById('cam-video');
+let videoReady = false;
+
+async function startCamera(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{exact:'environment'}, // cámara trasera obligatoria
+        width:{ideal:1280},height:{ideal:720}
+      },
+      audio:false
     });
+    video.srcObject = stream;
+    video.onloadedmetadata = ()=>{ videoReady=true; };
+  } catch(err){
+    // Fallback: sin exact (algunos dispositivos no lo aceptan)
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:'environment'},audio:false
+      });
+      video.srcObject = stream;
+      video.onloadedmetadata = ()=>{ videoReady=true; };
+    } catch(e){
+      alert('No se pudo acceder a la cámara: '+e.message);
+    }
   }
+}
+
+/* ════════════════════════════════════════════════════════════
+   DETECCIÓN DE SUPERFICIE
+   ──────────────────────────────────────────────────────────
+   MODO A (WebXR Hit Test): detección real de planos, funciona
+     en Chrome 81+ Android con WebXR activo.
+   MODO B (DeviceOrientation): usa el giroscopio para saber
+     cuándo el celular apunta a una superficie horizontal.
+     No requiere WebXR. Funciona en todos los Android modernos.
+   El sistema intenta A primero. Si falla, cae a B.
+════════════════════════════════════════════════════════════ */
+let detectionMode = 'none'; // 'webxr' | 'orientation'
+let xrSession=null, xrRefSpace=null, xrHitSource=null;
+let xrHitMatrix=null;  // última posición hit
+let orientationOk=false, orientationBeta=0;
+let placedPosition=null; // THREE.Vector3 donde se colocó la ecuación
+let placedDistance=1.2;  // metros frente a la cámara (modo orientación)
+
+/* — Intenta WebXR — */
+async function tryWebXR(){
+  if(!navigator.xr){ return false; }
+  const supported = await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
+  if(!supported){ return false; }
+  try{
+    xrSession = await navigator.xr.requestSession('immersive-ar',{
+      requiredFeatures:['hit-test'],
+      optionalFeatures:['dom-overlay'],
+      domOverlay:{root:document.body}
+    });
+    renderer.xr.enabled = true;
+    renderer.xr.setSession(xrSession);
+    const refSpace = await xrSession.requestReferenceSpace('local');
+    xrRefSpace = await xrSession.requestReferenceSpace('viewer');
+    xrHitSource = await xrSession.requestHitTestSource({space:xrRefSpace});
+    xrSession.addEventListener('end',()=>{
+      xrSession=null;xrHitSource=null;
+      detectionMode='orientation';
+      document.getElementById('mode-badge').textContent='modo: orientacion';
+    });
+    detectionMode='webxr';
+    document.getElementById('mode-badge').textContent='modo: WebXR';
+    camera.position.set(0,0,0);
+    // loop WebXR
+    xrSession.requestAnimationFrame(xrFrame);
+    return true;
+  } catch(e){
+    return false;
+  }
+}
+
+/* — Loop WebXR — */
+function xrFrame(t, frame){
+  if(!xrSession) return;
+  xrSession.requestAnimationFrame(xrFrame);
+  if(!xrHitSource) return;
+
+  const pose = frame.getViewerPose(xrRefSpace);
+  if(!pose) return;
+
+  const hits = frame.getHitTestResults(xrHitSource);
+  if(hits.length > 0){
+    const hit = hits[0];
+    const hitPose = hit.getPose(xrRefSpace);
+    if(hitPose){
+      xrHitMatrix = hitPose.transform.matrix;
+      setSurfaceReady(true);
+    }
+  } else {
+    if(!equationPlaced) setSurfaceReady(false);
+  }
+
+  // render
+  renderer.render(scene, camera);
+}
+
+/* — DeviceOrientation fallback — */
+function startOrientationMode(){
+  detectionMode='orientation';
+  document.getElementById('mode-badge').textContent='modo: orientacion';
+
+  // En iOS 13+ se necesita pedir permiso
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function'){
+    DeviceOrientationEvent.requestPermission()
+      .then(r=>{ if(r==='granted') window.addEventListener('deviceorientation',onOrient); })
+      .catch(()=>{});
+  } else {
+    window.addEventListener('deviceorientation',onOrient);
+  }
+  startRenderLoop();
+}
+
+function onOrient(e){
+  // beta: inclinación adelante-atrás (0=plano, 90=vertical)
+  // Para apuntar a una mesa, el celular está inclinado ~30-70°
+  orientationBeta = e.beta || 0;
+  // Consideramos superficie válida si beta está entre 25° y 80°
+  const ok = orientationBeta > 25 && orientationBeta < 80;
+  if(!equationPlaced) setSurfaceReady(ok);
+}
+
+/* — Estado de superficie detectada — */
+function setSurfaceReady(ok){
+  if(surfaceReady===ok) return;
+  surfaceReady=ok;
+  const hint=document.getElementById('surface-hint');
+  const reticle=document.getElementById('reticle');
+  const placeBtn=document.getElementById('place-btn');
+  const hintTxt=document.getElementById('hint-txt');
+  if(ok){
+    hint.classList.add('detected');
+    hintTxt.innerHTML='SUPERFICIE<br>DETECTADA';
+    reticle.classList.add('show');
+    placeBtn.classList.add('show');
+  } else {
+    hint.classList.remove('detected');
+    hintTxt.innerHTML='BUSCA UNA<br>SUPERFICIE PLANA';
+    reticle.classList.remove('show');
+    placeBtn.classList.remove('show');
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   COLOCAR ECUACIÓN
+════════════════════════════════════════════════════════════ */
+function placeEquation(){
+  if(!surfaceReady && !equationPlaced) return;
+
+  if(detectionMode==='webxr' && xrHitMatrix){
+    // Extraer posición del hit matrix WebXR
+    const m = new THREE.Matrix4().fromArray(xrHitMatrix);
+    const pos = new THREE.Vector3().setFromMatrixPosition(m);
+    eqGroup.position.copy(pos);
+    eqGroup.position.y += 0.005; // 5mm sobre la superficie
+    // Orientar paralelo al suelo
+    eqGroup.rotation.set(-Math.PI/2, 0, 0);
+  } else {
+    // Modo orientación: colocar la ecuación a distancia fija frente
+    // a la cámara, a altura de mesa estimada
+    // Usamos una posición fija relativa a la cámara
+    eqGroup.position.set(0, -0.15, -placedDistance);
+    eqGroup.rotation.set(-Math.PI/2, 0, 0);
+    // Ajustar distancia según inclinación
+    if(orientationBeta>0){
+      const d = Math.cos((orientationBeta*Math.PI)/180)*1.5;
+      placedDistance = Math.max(0.6, Math.min(d, 2.0));
+      eqGroup.position.z = -placedDistance;
+    }
+  }
+
+  // Mostrar ecuación
+  drawEquation(cur ? cur.eq : '7x - 4 = 23');
+  eqGroup.visible = true;
+  equationPlaced  = true;
+
+  // Ocultar hints, mostrar botones
+  document.getElementById('surface-hint').style.opacity='0';
+  setTimeout(()=>{document.getElementById('surface-hint').style.display='none';},400);
+  document.getElementById('reticle').classList.remove('show');
+  document.getElementById('place-btn').classList.remove('show');
+  document.getElementById('options-panel').style.display='flex';
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER LOOP (modo orientación / sin WebXR)
+════════════════════════════════════════════════════════════ */
+function startRenderLoop(){
+  function loop(){
+    requestAnimationFrame(loop);
+    // En modo orientación, la cámara mira siempre hacia adelante
+    // El objeto se posiciona delante de ella
+    renderer.render(scene, camera);
+  }
+  loop();
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESIZE
+════════════════════════════════════════════════════════════ */
+window.addEventListener('resize',()=>{
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+/* ════════════════════════════════════════════════════════════
+   LÓGICA DE PREGUNTAS / RESPUESTAS / UI
+   (igual que antes, sin cambios en genExercise)
+════════════════════════════════════════════════════════════ */
+function loadQuestion(){
+  cur = genExercise();
+  // Actualiza el canvas si ya está colocado
+  if(equationPlaced){ drawEquation(cur.eq); }
+  // Botones
   document.querySelectorAll('.opt-btn').forEach((b,i)=>{
     b.textContent=`x = ${cur.opts[i]}`;
-    b.className='opt-btn'; b.disabled=false;
+    b.className='opt-btn';b.disabled=false;
   });
-  document.getElementById('q-counter').textContent=`Q ${qNum} / oo`;
+  document.getElementById('q-counter').textContent=`Q ${qNum} / ∞`;
   document.getElementById('solution-popup').classList.remove('visible');
 }
 
@@ -405,7 +699,7 @@ function checkAnswer(idx){
   const ok=idx===cur.correct;
   doFlash(ok?'green':'red');
   document.querySelectorAll('.opt-btn')[cur.correct].classList.add('correct');
-  if(!ok) document.querySelectorAll('.opt-btn')[idx].classList.add('wrong');
+  if(!ok)document.querySelectorAll('.opt-btn')[idx].classList.add('wrong');
   score=Math.max(0,score+(ok?10:-5));
   document.getElementById('score-display').textContent=String(score).padStart(3,'0');
   showPopup(ok);
@@ -413,7 +707,7 @@ function checkAnswer(idx){
 
 function doFlash(color){
   const f=document.getElementById('flash'),nb=document.getElementById('neon-border');
-  f.className=color; nb.className=color;
+  f.className=color;nb.className=color;
   setTimeout(()=>{f.classList.add('fade');nb.className='';},600);
   setTimeout(()=>{f.className='';},760);
 }
@@ -423,7 +717,7 @@ function showPopup(ok){
   const badge=document.getElementById('popup-badge');
   document.getElementById('popup-eq').textContent=cur.eq;
   badge.className=`popup-badge ${ok?'correct':'wrong'}`;
-  badge.textContent=ok?'Correcto +10':'Incorrecto -5';
+  badge.textContent=ok?'✓  Correcto  +10':'✗  Incorrecto  -5';
   const list=document.getElementById('step-list');
   list.innerHTML='';
   cur.steps.forEach((s,i)=>{
@@ -434,9 +728,27 @@ function showPopup(ok){
   pop.classList.add('visible');
 }
 
-function nextQuestion(){qNum++;loadQuestion();}
+function nextQuestion(){
+  qNum++;
+  // Si ya estaba colocada la ecuación, solo actualizar el texto
+  loadQuestion();
+  if(equationPlaced) drawEquation(cur.eq);
+}
 
-window.addEventListener('DOMContentLoaded',loadQuestion);
+/* ════════════════════════════════════════════════════════════
+   INICIO
+════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', async ()=>{
+  await startCamera();
+  loadQuestion();
+
+  // Intentar WebXR primero
+  const xrOk = await tryWebXR();
+  if(!xrOk){
+    // Fallback: orientación del dispositivo
+    startOrientationMode();
+  }
+});
 </script>
 </body>
 </html>
