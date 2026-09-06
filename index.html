@@ -367,44 +367,83 @@ const eqGroup = new THREE.Group();
 eqGroup.visible = false;
 scene.add(eqGroup);
 
-/* Canvas 2D → textura ecuación */
-const eqCvs  = document.createElement('canvas');
-eqCvs.width  = 1024; eqCvs.height = 256;
-const eqCtx  = eqCvs.getContext('2d');
-const eqTex  = new THREE.CanvasTexture(eqCvs);
+/* ── Canvas 2D → textura ecuación ──────────────────────────
+   Resolución: 1024 x 320 px  (ratio 3.2:1)
+   Geometría:  0.32m x 0.10m  (mismo ratio, sin distorsión)
+   Fondo + borde + texto se dibujan en UN SOLO canvas:
+   imposible el z-fighting entre fondo y texto.
+   ────────────────────────────────────────────────────────── */
+const EQ_CW = 1024, EQ_CH = 320;   // canvas en pixels
+const EQ_W  = 0.32,  EQ_H  = 0.10; // ancho/alto en metros (mismo ratio)
 
-const eqMat  = new THREE.MeshBasicMaterial({map:eqTex,transparent:true,
-                                             depthWrite:false,side:THREE.DoubleSide});
-/* PlaneGeometry en metros reales — 28cm x 7cm (buena escala de mesa) */
-const eqMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28,0.07),eqMat);
+const eqCvs = document.createElement('canvas');
+eqCvs.width  = EQ_CW;
+eqCvs.height = EQ_CH;
+const eqCtx = eqCvs.getContext('2d');
+const eqTex = new THREE.CanvasTexture(eqCvs);
+
+const eqMat = new THREE.MeshBasicMaterial({
+  map: eqTex,
+  transparent: true,
+  depthWrite: false,      // no escribe depth -> nunca genera z-fighting
+  depthTest: true,
+  side: THREE.DoubleSide
+});
+
+/* Geometria con exactamente el mismo ratio que el canvas */
+const eqMesh = new THREE.Mesh(new THREE.PlaneGeometry(EQ_W, EQ_H), eqMat);
+eqMesh.renderOrder = 999;  // siempre dibujado encima de cualquier otro mesh
+eqMesh.position.y  = 0.004; // 4mm sobre el plano del grupo -> evita z-fighting con la superficie
 eqGroup.add(eqMesh);
 
-/* Plataforma decorativa */
-const bMat1=new THREE.MeshBasicMaterial({color:0x001a0d,transparent:true,opacity:.86});
-const bMat2=new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.19});
-const base1=new THREE.Mesh(new THREE.BoxGeometry(0.31,0.003,0.10),bMat1);
-const base2=new THREE.Mesh(new THREE.BoxGeometry(0.33,0.0015,0.105),bMat2);
-base1.position.y=0.001; base2.position.y=0.002;
-eqGroup.add(base1,base2);
+/* SIN cajas 3D adicionales: el fondo se pinta dentro del canvas,
+   nunca puede quedar por encima del texto porque estan en el mismo plano. */
 
-/* Dibuja la ecuación en el canvas 2D */
+/* Dibuja fondo + borde + texto en un solo canvas 2D */
 function drawEquation(text){
-  const cw=1024,ch=256,ctx=eqCtx,r=36;
-  eqCvs.width=cw;eqCvs.height=ch;
+  const cw=EQ_CW, ch=EQ_CH, ctx=eqCtx;
+  eqCvs.width=cw; eqCvs.height=ch;   // resetea y limpia
   ctx.clearRect(0,0,cw,ch);
-  ctx.fillStyle='rgba(0,0,0,0.66)';
+
+  /* Fondo redondeado con padding interior */
+  const r=40, pad=10;
+  ctx.fillStyle='rgba(0,10,3,0.84)';
   ctx.beginPath();
-  ctx.moveTo(r,0);ctx.lineTo(cw-r,0);ctx.quadraticCurveTo(cw,0,cw,r);
-  ctx.lineTo(cw,ch-r);ctx.quadraticCurveTo(cw,ch,cw-r,ch);
-  ctx.lineTo(r,ch);ctx.quadraticCurveTo(0,ch,0,ch-r);
-  ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);
-  ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#00FF00';ctx.lineWidth=7;
-  ctx.shadowColor='#00FF00';ctx.shadowBlur=30;ctx.stroke();
-  ctx.font='bold 108px monospace';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.shadowBlur=26;ctx.shadowColor='#00FF00';ctx.fillStyle='#00FF00';
-  ctx.fillText(text,cw/2,ch/2);
+  ctx.moveTo(r+pad,pad);       ctx.lineTo(cw-r-pad,pad);
+  ctx.quadraticCurveTo(cw-pad,pad,    cw-pad,r+pad);
+  ctx.lineTo(cw-pad,ch-r-pad);
+  ctx.quadraticCurveTo(cw-pad,ch-pad, cw-r-pad,ch-pad);
+  ctx.lineTo(r+pad,ch-pad);
+  ctx.quadraticCurveTo(pad,ch-pad,    pad,ch-r-pad);
+  ctx.lineTo(pad,r+pad);
+  ctx.quadraticCurveTo(pad,pad,       r+pad,pad);
+  ctx.closePath();
+  ctx.fill();
+
+  /* Borde neon */
+  ctx.strokeStyle='#00FF00';
+  ctx.lineWidth=6;
+  ctx.shadowColor='#00FF00';
+  ctx.shadowBlur=22;
+  ctx.stroke();
+
+  /* Texto: autoajuste de tamano para que siempre quepa
+     Empieza en 88px, reduce hasta que mida menos de (cw - 100px) */
+  ctx.textAlign   ='center';
+  ctx.textBaseline='middle';
+  ctx.shadowColor ='#00FF00';
+
+  let fs=88;
+  ctx.font=`bold ${fs}px monospace`;
+  while(ctx.measureText(text).width > cw-100 && fs>36){
+    fs-=4;
+    ctx.font=`bold ${fs}px monospace`;
+  }
+
+  ctx.shadowBlur=20;
+  ctx.fillStyle='#00FF00';
+  ctx.fillText(text, cw/2, ch/2);  /* centro exacto del canvas */
+
   eqTex.needsUpdate=true;
 }
 
