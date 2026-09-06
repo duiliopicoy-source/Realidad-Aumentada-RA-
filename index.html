@@ -6,54 +6,40 @@
   <title>Álgebra en RA</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
   <style>
-    /* ═══════════════════════════════════════════════
-       BASE — sin scroll, sin overflow, fondo negro
-    ═══════════════════════════════════════════════ */
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html,body{
       width:100%;height:100%;overflow:hidden;
-      background:#000;
-      font-family:'Share Tech Mono',monospace;
+      background:#000;font-family:'Share Tech Mono',monospace;
       touch-action:none;
     }
 
-    /* ═══════════════════════════════════════════════
-       CÁMARA — video ocupa TODO el viewport
-       object-fit:cover → sin franjas negras
-    ═══════════════════════════════════════════════ */
+    /* ── Cámara: fondo completo ── */
     #cam-video{
       position:fixed;top:0;left:0;
       width:100vw;height:100vh;
-      object-fit:cover;
-      z-index:0;
-      background:#000;
+      object-fit:cover;z-index:0;background:#000;
     }
 
-    /* ═══════════════════════════════════════════════
-       CANVAS Three.js — encima del video, transparente
-    ═══════════════════════════════════════════════ */
+    /* ── Canvas Three.js: encima del video, transparente ── */
     #three-canvas{
       position:fixed;top:0;left:0;
       width:100vw;height:100vh;
-      z-index:1;
-      pointer-events:none;
+      z-index:1;pointer-events:none;
     }
 
-    /* ═══════════════════════════════════════════════
-       HUD — encima de todo
-    ═══════════════════════════════════════════════ */
+    /* ── HUD ── */
     #hud{
-      position:fixed;inset:0;
-      z-index:10;pointer-events:none;
+      position:fixed;inset:0;z-index:10;
+      pointer-events:none;
       display:flex;flex-direction:column;justify-content:flex-end;
     }
 
-    /* — Score bar — */
+    /* Score bar */
     #score-bar{
       position:fixed;top:0;left:0;right:0;
       padding:8px 16px 6px;
       display:flex;justify-content:space-between;align-items:center;
-      background:linear-gradient(180deg,rgba(0,0,0,.82) 0%,transparent 100%);
+      background:linear-gradient(180deg,rgba(0,0,0,.85) 0%,transparent 100%);
       z-index:11;
     }
     #score-bar .lbl{
@@ -70,7 +56,7 @@
       letter-spacing:2px;color:#00d4ff88;
     }
 
-    /* — Flash de respuesta — */
+    /* Flash */
     #flash{
       position:fixed;inset:0;pointer-events:none;z-index:9;
       opacity:0;transition:opacity .1s;
@@ -79,7 +65,7 @@
     #flash.red  {background:rgba(255,30,30,.26); opacity:1;}
     #flash.fade {opacity:0;}
 
-    /* — Borde neón — */
+    /* Borde neón */
     #neon-border{
       position:fixed;inset:0;pointer-events:none;z-index:8;
       border:4px solid transparent;
@@ -94,7 +80,7 @@
       box-shadow:inset 0 0 24px #ff222244,0 0 24px #ff222244;
     }
 
-    /* — Panel de botones — */
+    /* Botones respuesta */
     #options-panel{
       pointer-events:all;
       padding:0 12px 14px;
@@ -104,7 +90,6 @@
       text-align:center;font-size:9px;letter-spacing:3px;
       color:#00d4ff55;margin-bottom:2px;text-transform:uppercase;
     }
-    /* Botones más delgados: padding reducido a 9px */
     .opt-btn{
       width:100%;padding:9px 10px;
       border:1.5px solid #00ff9d44;border-radius:6px;
@@ -121,67 +106,77 @@
     .opt-btn.wrong  {background:rgba(255,30,30,.22); border-color:#ff2222;box-shadow:0 0 14px #ff222266;color:#ff8888;}
     .opt-btn:disabled{cursor:default;}
 
-    /* — Hint de superficie — */
+    /* Hint de superficie */
     #surface-hint{
-      position:fixed;top:50%;left:50%;
+      position:fixed;top:40%;left:50%;
       transform:translate(-50%,-50%);
       text-align:center;pointer-events:none;
       z-index:12;transition:opacity .4s;
     }
-    #surface-hint .ring{
-      width:64px;height:64px;
-      border:2px solid #00ff9d55;border-radius:50%;
+    #surface-hint .sh-ring{
+      width:70px;height:70px;
+      border:2px solid #00ff9d44;border-radius:50%;
       margin:0 auto 10px;
       display:flex;align-items:center;justify-content:center;
-      animation:pulse 2s infinite;
+      animation:shpulse 2s infinite;
     }
-    #surface-hint .ring-txt{
+    #surface-hint .sh-txt{
       font-family:'Orbitron',monospace;font-size:10px;
-      letter-spacing:3px;color:#00ff9d88;text-transform:uppercase;
-      line-height:1.6;
+      letter-spacing:3px;color:#00ff9d77;text-transform:uppercase;
+      line-height:1.7;
     }
-    #surface-hint.detected .ring{
+    #surface-hint.detected .sh-ring{
       border-color:#00ff9dcc;
-      box-shadow:0 0 18px #00ff9d55;
+      box-shadow:0 0 20px #00ff9d44;
+      animation:none;
     }
-    #surface-hint.detected .ring-txt{
+    #surface-hint.detected .sh-txt{
       color:#00ff9d;
-      text-shadow:0 0 8px #00ff9d;
+      text-shadow:0 0 10px #00ff9d88;
     }
-    @keyframes pulse{
+    @keyframes shpulse{
       0%,100%{opacity:.4;transform:scale(1);}
-      50%     {opacity:1; transform:scale(1.08);}
+      50%     {opacity:1; transform:scale(1.1);}
     }
 
-    /* — Reticle (punto de anclaje en pantalla) — */
+    /* Reticle SVG centrado */
     #reticle{
       position:fixed;top:50%;left:50%;
       transform:translate(-50%,-50%);
-      width:44px;height:44px;
+      width:52px;height:52px;
       pointer-events:none;z-index:13;
       opacity:0;transition:opacity .3s;
     }
     #reticle.show{opacity:1;}
 
-    /* — Botón "Tocar para colocar" — */
+    /* Botón colocar */
     #place-btn{
-      position:fixed;bottom:190px;left:50%;
+      position:fixed;bottom:188px;left:50%;
       transform:translateX(-50%);
-      padding:10px 24px;
-      background:rgba(0,0,0,.78);
+      padding:10px 26px;
+      background:rgba(0,0,0,.82);
       border:1.5px solid #00d4ff;border-radius:30px;
       color:#00d4ff;font-family:'Orbitron',monospace;
-      font-size:11px;letter-spacing:2px;
-      cursor:pointer;pointer-events:all;z-index:14;
+      font-size:11px;letter-spacing:2px;cursor:pointer;
+      pointer-events:all;z-index:14;
       display:none;text-transform:uppercase;
+      box-shadow:0 0 0 #00d4ff00;
       transition:box-shadow .2s;
     }
     #place-btn.show{display:block;}
-    #place-btn:hover{box-shadow:0 0 16px #00d4ff66;}
+    #place-btn:hover{box-shadow:0 0 18px #00d4ff55;}
 
-    /* — Popup de solución — */
+    /* Badge modo (debug) */
+    #mode-badge{
+      position:fixed;top:52px;right:12px;z-index:12;
+      font-family:'Orbitron',monospace;font-size:8px;
+      letter-spacing:1px;color:#ffffff33;text-transform:uppercase;
+      pointer-events:none;
+    }
+
+    /* Popup solución */
     #solution-popup{
-      display:none;position:fixed;left:50%;top:45%;
+      display:none;position:fixed;left:50%;top:44%;
       transform:translate(-50%,-50%) scale(.88);
       width:min(92vw,370px);
       background:rgba(4,12,20,.97);
@@ -195,7 +190,6 @@
       to  {opacity:1;transform:translate(-50%,-50%) scale(1);}
     }
     #solution-popup.visible{display:block;}
-
     .popup-badge{
       display:inline-block;font-family:'Orbitron',monospace;
       font-size:10px;letter-spacing:3px;padding:3px 10px;
@@ -232,31 +226,17 @@
       text-transform:uppercase;transition:background .15s,box-shadow .15s;
     }
     #next-btn:hover{background:linear-gradient(135deg,#00d4ff44,#00ff9d33);box-shadow:0 0 16px #00d4ff66;}
-
-    /* — Badge de modo (WebXR vs Orientación) — */
-    #mode-badge{
-      position:fixed;top:52px;right:12px;z-index:12;
-      font-family:'Orbitron',monospace;font-size:8px;
-      letter-spacing:1px;color:#00d4ff55;text-transform:uppercase;
-      pointer-events:none;
-    }
   </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════════
-     VIDEO: cámara trasera, pantalla completa
-════════════════════════════════════════════════════════ -->
+<!-- Cámara trasera: fondo 100vw x 100vh -->
 <video id="cam-video" autoplay playsinline muted></video>
 
-<!-- ════════════════════════════════════════════════════════
-     CANVAS Three.js: renderizado 3D encima del video
-════════════════════════════════════════════════════════ -->
+<!-- Canvas Three.js transparente sobre el video -->
 <canvas id="three-canvas"></canvas>
 
-<!-- ════════════════════════════════════════════════════════
-     HUD
-════════════════════════════════════════════════════════ -->
+<!-- Score bar -->
 <div id="score-bar">
   <div>
     <div class="lbl">Score</div>
@@ -267,34 +247,37 @@
 
 <div id="flash"></div>
 <div id="neon-border"></div>
-<div id="mode-badge">modo: init</div>
+<div id="mode-badge">iniciando...</div>
 
-<!-- Reticle (anillo de anclaje visible en pantalla) -->
+<!-- Reticle (anillo de anclaje) -->
 <div id="reticle">
-  <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="22" cy="22" r="18" stroke="#00ff9d" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9"/>
-    <circle cx="22" cy="22" r="3"  fill="#00ff9d" opacity="0.9"/>
-    <line x1="22" y1="4"  x2="22" y2="11" stroke="#00ff9d" stroke-width="1.5"/>
-    <line x1="22" y1="33" x2="22" y2="40" stroke="#00ff9d" stroke-width="1.5"/>
-    <line x1="4"  y1="22" x2="11" y2="22" stroke="#00ff9d" stroke-width="1.5"/>
-    <line x1="33" y1="22" x2="40" y2="22" stroke="#00ff9d" stroke-width="1.5"/>
+  <svg viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="26" cy="26" r="20" stroke="#00ff9d" stroke-width="1.5"
+            stroke-dasharray="5 4" opacity=".9"/>
+    <circle cx="26" cy="26" r="3.5" fill="#00ff9d" opacity=".9"/>
+    <line x1="26" y1="4"  x2="26" y2="13" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="26" y1="39" x2="26" y2="48" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="4"  y1="26" x2="13" y2="26" stroke="#00ff9d" stroke-width="1.5"/>
+    <line x1="39" y1="26" x2="48" y2="26" stroke="#00ff9d" stroke-width="1.5"/>
   </svg>
 </div>
 
 <!-- Hint de superficie -->
 <div id="surface-hint">
-  <div class="ring">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 3l1.5 3h3l-2.5 2 1 3L12 9.5 9 11l1-3L7.5 6h3z" stroke="#00ff9d" stroke-width="1.2" stroke-linejoin="round"/>
+  <div class="sh-ring">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="4" y="10" width="20" height="12" rx="2"
+            stroke="#00ff9d" stroke-width="1.4" opacity=".7"/>
+      <path d="M8 10V8a6 6 0 0112 0v2" stroke="#00ff9d" stroke-width="1.4" opacity=".5"/>
     </svg>
   </div>
-  <div class="ring-txt" id="hint-txt">BUSCA UNA<br>SUPERFICIE PLANA</div>
+  <div class="sh-txt" id="hint-txt">BUSCA UNA<br>SUPERFICIE PLANA</div>
 </div>
 
-<!-- Botón colocar (aparece cuando hay superficie) -->
+<!-- Botón colocar -->
 <button id="place-btn" onclick="placeEquation()">⊕ &nbsp;Colocar aquí</button>
 
-<!-- Botones de respuesta -->
+<!-- Botones respuesta (ocultos hasta colocar ecuación) -->
 <div id="hud">
   <div id="options-panel" style="display:none;">
     <div class="hint-lbl">Selecciona la respuesta</div>
@@ -313,15 +296,11 @@
   <button id="next-btn" onclick="nextQuestion()">▶ &nbsp;Siguiente Ejercicio</button>
 </div>
 
-<!-- ════════════════════════════════════════════════════════
-     Three.js desde CDN
-════════════════════════════════════════════════════════ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
 <script>
-/* ════════════════════════════════════════════════════════════
-   MOTOR DE EJERCICIOS (sin cambios respecto a tu código)
-════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   MOTOR DE EJERCICIOS (sin cambios)
+════════════════════════════════════════ */
 function gcd(a,b){return b===0?Math.abs(a):gcd(b,a%b);}
 function frac(num,den){
   if(den<0){num=-num;den=-den;}
@@ -336,46 +315,29 @@ function shuffle(arr){
     [arr[i],arr[j]]=[arr[j],arr[i]];
   }
 }
-
 function genExercise(){
   const type=randInt(0,3);
   let eq,ans,steps,label;
   if(type===0){
     const a=randInt(2,9),b=randInt(1,8),c=randInt(b+2,b+a*6);
     eq=`${a}x + ${b} = ${c}`;ans=frac(c-b,a);label=fmt(ans);
-    steps=[
-      `Ecuacion: <em>${eq}</em>`,
-      `Restamos ${b}: <em>${a}x = ${c-b}</em>`,
-      `Dividimos entre ${a}: <em>x = ${c-b}/${a}</em>`,
-      `Resultado: <em>x = ${label}</em>`
-    ];
-  } else if(type===1){
+    steps=[`Ecuacion: <em>${eq}</em>`,`Restamos ${b}: <em>${a}x = ${c-b}</em>`,
+           `Dividimos entre ${a}: <em>x = ${c-b}/${a}</em>`,`Resultado: <em>x = ${label}</em>`];
+  }else if(type===1){
     const a=randInt(2,9),b=randInt(1,8),c=randInt(1,a*6);
     eq=`${a}x - ${b} = ${c}`;ans=frac(c+b,a);label=fmt(ans);
-    steps=[
-      `Ecuacion: <em>${eq}</em>`,
-      `Sumamos ${b}: <em>${a}x = ${c+b}</em>`,
-      `Dividimos entre ${a}: <em>x = ${c+b}/${a}</em>`,
-      `Resultado: <em>x = ${label}</em>`
-    ];
-  } else if(type===2){
+    steps=[`Ecuacion: <em>${eq}</em>`,`Sumamos ${b}: <em>${a}x = ${c+b}</em>`,
+           `Dividimos entre ${a}: <em>x = ${c+b}/${a}</em>`,`Resultado: <em>x = ${label}</em>`];
+  }else if(type===2){
     const a=randInt(2,9),c=randInt(1,a*7);
     eq=`${a}x = ${c}`;ans=frac(c,a);label=fmt(ans);
-    steps=[
-      `Ecuacion: <em>${eq}</em>`,
-      `Dividimos entre ${a}`,
-      `<em>x = ${c}/${a}</em>`,
-      `Resultado: <em>x = ${label}</em>`
-    ];
-  } else {
+    steps=[`Ecuacion: <em>${eq}</em>`,`Dividimos entre ${a}`,
+           `<em>x = ${c}/${a}</em>`,`Resultado: <em>x = ${label}</em>`];
+  }else{
     const a=randInt(2,6),b=randInt(1,5),c=randInt(b+2,b+8);
     eq=`x/${a} + ${b} = ${c}`;const xv=a*(c-b);ans=frac(xv,1);label=String(xv);
-    steps=[
-      `Ecuacion: <em>${eq}</em>`,
-      `Restamos ${b}: <em>x/${a} = ${c-b}</em>`,
-      `Multiplicamos por ${a}: <em>x = ${a} x ${c-b}</em>`,
-      `Resultado: <em>x = ${label}</em>`
-    ];
+    steps=[`Ecuacion: <em>${eq}</em>`,`Restamos ${b}: <em>x/${a} = ${c-b}</em>`,
+           `Multiplicamos por ${a}: <em>x = ${a} x ${c-b}</em>`,`Resultado: <em>x = ${label}</em>`];
   }
   const opts=[label];
   while(opts.length<3){
@@ -386,305 +348,378 @@ function genExercise(){
   return{eq,ans,label,opts,correct:opts.indexOf(label),steps};
 }
 
-/* ════════════════════════════════════════════════════════════
-   ESTADO GLOBAL
-════════════════════════════════════════════════════════════ */
-let score=0,qNum=1,cur=null;
-let equationPlaced=false;   // si ya se colocó la ecuación
-let surfaceReady=false;      // si hay superficie detectada
-
-/* ════════════════════════════════════════════════════════════
-   THREE.JS — ESCENA 3D
-════════════════════════════════════════════════════════════ */
-const canvas3d = document.getElementById('three-canvas');
-const renderer = new THREE.WebGLRenderer({canvas:canvas3d, alpha:true, antialias:true});
+/* ════════════════════════════════════════
+   THREE.JS — ESCENA
+════════════════════════════════════════ */
+const cvs3d = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({canvas:cvs3d,alpha:true,antialias:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x000000, 0); // fondo transparente
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setClearColor(0x000000,0); // transparente
 
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 100);
-camera.position.set(0, 1.5, 0); // posicion "ojo" aproximada
+/* Cámara perspectiva — FOV se calibrará según el stream de video */
+const camera = new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.001,100);
+scene.add(camera);
 
-/* — Grupo raíz del ejercicio — */
+/* Grupo de la ecuación — empieza oculto */
 const eqGroup = new THREE.Group();
-eqGroup.visible = false; // oculto hasta colocar
+eqGroup.visible = false;
 scene.add(eqGroup);
 
-/* — Canvas2D para la ecuación (mismo componente que antes) — */
-const eqCanvas  = document.createElement('canvas');
-eqCanvas.width  = 1024;
-eqCanvas.height = 256;
-const eqCtx     = eqCanvas.getContext('2d');
-const eqTexture = new THREE.CanvasTexture(eqCanvas);
+/* Canvas 2D → textura ecuación */
+const eqCvs  = document.createElement('canvas');
+eqCvs.width  = 1024; eqCvs.height = 256;
+const eqCtx  = eqCvs.getContext('2d');
+const eqTex  = new THREE.CanvasTexture(eqCvs);
 
-const eqMat  = new THREE.MeshBasicMaterial({
-  map:eqTexture, transparent:true, depthWrite:false, side:THREE.DoubleSide
-});
-// PlaneGeometry 4:1 (mismo ratio que antes)
-const eqMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.07), eqMat);
+const eqMat  = new THREE.MeshBasicMaterial({map:eqTex,transparent:true,
+                                             depthWrite:false,side:THREE.DoubleSide});
+/* PlaneGeometry en metros reales — 28cm x 7cm (buena escala de mesa) */
+const eqMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28,0.07),eqMat);
 eqGroup.add(eqMesh);
 
-// Plataforma neón base
-const baseMat1 = new THREE.MeshBasicMaterial({color:0x001a0d,transparent:true,opacity:.85});
-const baseMat2 = new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.18});
-const base1 = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.003,0.10), baseMat1);
-const base2 = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.0015,0.11),baseMat2);
-base1.position.y = 0.001;
-base2.position.y = 0.002;
+/* Plataforma decorativa */
+const bMat1=new THREE.MeshBasicMaterial({color:0x001a0d,transparent:true,opacity:.86});
+const bMat2=new THREE.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.19});
+const base1=new THREE.Mesh(new THREE.BoxGeometry(0.31,0.003,0.10),bMat1);
+const base2=new THREE.Mesh(new THREE.BoxGeometry(0.33,0.0015,0.105),bMat2);
+base1.position.y=0.001; base2.position.y=0.002;
 eqGroup.add(base1,base2);
 
-/* Función que dibuja la ecuación en el canvas2D */
+/* Dibuja la ecuación en el canvas 2D */
 function drawEquation(text){
-  const cw=1024,ch=256,ctx=eqCtx;
-  eqCanvas.width=cw;eqCanvas.height=ch;
+  const cw=1024,ch=256,ctx=eqCtx,r=36;
+  eqCvs.width=cw;eqCvs.height=ch;
   ctx.clearRect(0,0,cw,ch);
-  // fondo redondeado
-  const r=36;
-  ctx.fillStyle='rgba(0,0,0,0.65)';
+  ctx.fillStyle='rgba(0,0,0,0.66)';
   ctx.beginPath();
-  ctx.moveTo(r,0);ctx.lineTo(cw-r,0);
-  ctx.quadraticCurveTo(cw,0,cw,r);
+  ctx.moveTo(r,0);ctx.lineTo(cw-r,0);ctx.quadraticCurveTo(cw,0,cw,r);
   ctx.lineTo(cw,ch-r);ctx.quadraticCurveTo(cw,ch,cw-r,ch);
   ctx.lineTo(r,ch);ctx.quadraticCurveTo(0,ch,0,ch-r);
   ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);
   ctx.closePath();ctx.fill();
-  // borde neón
   ctx.strokeStyle='#00FF00';ctx.lineWidth=7;
-  ctx.shadowColor='#00FF00';ctx.shadowBlur=30;
-  ctx.stroke();
-  // texto
+  ctx.shadowColor='#00FF00';ctx.shadowBlur=30;ctx.stroke();
   ctx.font='bold 108px monospace';
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.shadowBlur=26;ctx.shadowColor='#00FF00';ctx.fillStyle='#00FF00';
   ctx.fillText(text,cw/2,ch/2);
-  eqTexture.needsUpdate=true;
+  eqTex.needsUpdate=true;
 }
 
-/* ════════════════════════════════════════════════════════════
-   CÁMARA TRASERA
-════════════════════════════════════════════════════════════ */
-const video = document.getElementById('cam-video');
-let videoReady = false;
-
-async function startCamera(){
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video:{
-        facingMode:{exact:'environment'}, // cámara trasera obligatoria
-        width:{ideal:1280},height:{ideal:720}
-      },
-      audio:false
-    });
-    video.srcObject = stream;
-    video.onloadedmetadata = ()=>{ videoReady=true; };
-  } catch(err){
-    // Fallback: sin exact (algunos dispositivos no lo aceptan)
-    try{
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'environment'},audio:false
-      });
-      video.srcObject = stream;
-      video.onloadedmetadata = ()=>{ videoReady=true; };
-    } catch(e){
-      alert('No se pudo acceder a la cámara: '+e.message);
-    }
-  }
-}
-
-/* ════════════════════════════════════════════════════════════
-   DETECCIÓN DE SUPERFICIE
-   ──────────────────────────────────────────────────────────
-   MODO A (WebXR Hit Test): detección real de planos, funciona
-     en Chrome 81+ Android con WebXR activo.
-   MODO B (DeviceOrientation): usa el giroscopio para saber
-     cuándo el celular apunta a una superficie horizontal.
-     No requiere WebXR. Funciona en todos los Android modernos.
-   El sistema intenta A primero. Si falla, cae a B.
-════════════════════════════════════════════════════════════ */
-let detectionMode = 'none'; // 'webxr' | 'orientation'
-let xrSession=null, xrRefSpace=null, xrHitSource=null;
-let xrHitMatrix=null;  // última posición hit
-let orientationOk=false, orientationBeta=0;
-let placedPosition=null; // THREE.Vector3 donde se colocó la ecuación
-let placedDistance=1.2;  // metros frente a la cámara (modo orientación)
-
-/* — Intenta WebXR — */
-async function tryWebXR(){
-  if(!navigator.xr){ return false; }
-  const supported = await navigator.xr.isSessionSupported('immersive-ar').catch(()=>false);
-  if(!supported){ return false; }
-  try{
-    xrSession = await navigator.xr.requestSession('immersive-ar',{
-      requiredFeatures:['hit-test'],
-      optionalFeatures:['dom-overlay'],
-      domOverlay:{root:document.body}
-    });
-    renderer.xr.enabled = true;
-    renderer.xr.setSession(xrSession);
-    const refSpace = await xrSession.requestReferenceSpace('local');
-    xrRefSpace = await xrSession.requestReferenceSpace('viewer');
-    xrHitSource = await xrSession.requestHitTestSource({space:xrRefSpace});
-    xrSession.addEventListener('end',()=>{
-      xrSession=null;xrHitSource=null;
-      detectionMode='orientation';
-      document.getElementById('mode-badge').textContent='modo: orientacion';
-    });
-    detectionMode='webxr';
-    document.getElementById('mode-badge').textContent='modo: WebXR';
-    camera.position.set(0,0,0);
-    // loop WebXR
-    xrSession.requestAnimationFrame(xrFrame);
-    return true;
-  } catch(e){
-    return false;
-  }
-}
-
-/* — Loop WebXR — */
-function xrFrame(t, frame){
-  if(!xrSession) return;
-  xrSession.requestAnimationFrame(xrFrame);
-  if(!xrHitSource) return;
-
-  const pose = frame.getViewerPose(xrRefSpace);
-  if(!pose) return;
-
-  const hits = frame.getHitTestResults(xrHitSource);
-  if(hits.length > 0){
-    const hit = hits[0];
-    const hitPose = hit.getPose(xrRefSpace);
-    if(hitPose){
-      xrHitMatrix = hitPose.transform.matrix;
-      setSurfaceReady(true);
-    }
-  } else {
-    if(!equationPlaced) setSurfaceReady(false);
-  }
-
-  // render
-  renderer.render(scene, camera);
-}
-
-/* — DeviceOrientation fallback — */
-function startOrientationMode(){
-  detectionMode='orientation';
-  document.getElementById('mode-badge').textContent='modo: orientacion';
-
-  // En iOS 13+ se necesita pedir permiso
-  if(typeof DeviceOrientationEvent !== 'undefined' &&
-     typeof DeviceOrientationEvent.requestPermission === 'function'){
-    DeviceOrientationEvent.requestPermission()
-      .then(r=>{ if(r==='granted') window.addEventListener('deviceorientation',onOrient); })
-      .catch(()=>{});
-  } else {
-    window.addEventListener('deviceorientation',onOrient);
-  }
-  startRenderLoop();
-}
-
-function onOrient(e){
-  // beta: inclinación adelante-atrás (0=plano, 90=vertical)
-  // Para apuntar a una mesa, el celular está inclinado ~30-70°
-  orientationBeta = e.beta || 0;
-  // Consideramos superficie válida si beta está entre 25° y 80°
-  const ok = orientationBeta > 25 && orientationBeta < 80;
-  if(!equationPlaced) setSurfaceReady(ok);
-}
-
-/* — Estado de superficie detectada — */
-function setSurfaceReady(ok){
-  if(surfaceReady===ok) return;
-  surfaceReady=ok;
-  const hint=document.getElementById('surface-hint');
-  const reticle=document.getElementById('reticle');
-  const placeBtn=document.getElementById('place-btn');
-  const hintTxt=document.getElementById('hint-txt');
-  if(ok){
-    hint.classList.add('detected');
-    hintTxt.innerHTML='SUPERFICIE<br>DETECTADA';
-    reticle.classList.add('show');
-    placeBtn.classList.add('show');
-  } else {
-    hint.classList.remove('detected');
-    hintTxt.innerHTML='BUSCA UNA<br>SUPERFICIE PLANA';
-    reticle.classList.remove('show');
-    placeBtn.classList.remove('show');
-  }
-}
-
-/* ════════════════════════════════════════════════════════════
-   COLOCAR ECUACIÓN
-════════════════════════════════════════════════════════════ */
-function placeEquation(){
-  if(!surfaceReady && !equationPlaced) return;
-
-  if(detectionMode==='webxr' && xrHitMatrix){
-    // Extraer posición del hit matrix WebXR
-    const m = new THREE.Matrix4().fromArray(xrHitMatrix);
-    const pos = new THREE.Vector3().setFromMatrixPosition(m);
-    eqGroup.position.copy(pos);
-    eqGroup.position.y += 0.005; // 5mm sobre la superficie
-    // Orientar paralelo al suelo
-    eqGroup.rotation.set(-Math.PI/2, 0, 0);
-  } else {
-    // Modo orientación: colocar la ecuación a distancia fija frente
-    // a la cámara, a altura de mesa estimada
-    // Usamos una posición fija relativa a la cámara
-    eqGroup.position.set(0, -0.15, -placedDistance);
-    eqGroup.rotation.set(-Math.PI/2, 0, 0);
-    // Ajustar distancia según inclinación
-    if(orientationBeta>0){
-      const d = Math.cos((orientationBeta*Math.PI)/180)*1.5;
-      placedDistance = Math.max(0.6, Math.min(d, 2.0));
-      eqGroup.position.z = -placedDistance;
-    }
-  }
-
-  // Mostrar ecuación
-  drawEquation(cur ? cur.eq : '7x - 4 = 23');
-  eqGroup.visible = true;
-  equationPlaced  = true;
-
-  // Ocultar hints, mostrar botones
-  document.getElementById('surface-hint').style.opacity='0';
-  setTimeout(()=>{document.getElementById('surface-hint').style.display='none';},400);
-  document.getElementById('reticle').classList.remove('show');
-  document.getElementById('place-btn').classList.remove('show');
-  document.getElementById('options-panel').style.display='flex';
-}
-
-/* ════════════════════════════════════════════════════════════
-   RENDER LOOP (modo orientación / sin WebXR)
-════════════════════════════════════════════════════════════ */
-function startRenderLoop(){
-  function loop(){
-    requestAnimationFrame(loop);
-    // En modo orientación, la cámara mira siempre hacia adelante
-    // El objeto se posiciona delante de ella
-    renderer.render(scene, camera);
-  }
-  loop();
-}
-
-/* ════════════════════════════════════════════════════════════
-   RESIZE
-════════════════════════════════════════════════════════════ */
 window.addEventListener('resize',()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
   camera.aspect=window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
 });
 
-/* ════════════════════════════════════════════════════════════
-   LÓGICA DE PREGUNTAS / RESPUESTAS / UI
-   (igual que antes, sin cambios en genExercise)
-════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   CÁMARA TRASERA
+════════════════════════════════════════ */
+const video=document.getElementById('cam-video');
+
+async function startCamera(){
+  const constraints=[
+    {video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false},
+    {video:{facingMode:'environment'},audio:false},
+    {video:true,audio:false}
+  ];
+  for(const c of constraints){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia(c);
+      video.srcObject=stream;
+      await new Promise(r=>video.onloadedmetadata=r);
+      return true;
+    }catch(e){}
+  }
+  alert('No se pudo acceder a la cámara trasera.');
+  return false;
+}
+
+/* ════════════════════════════════════════
+   DETECCIÓN DE SUPERFICIES
+   ─────────────────────────────────────
+   MODO 1: WebXR Hit Test (Chrome Android 81+)
+     — Detección real de planos mediante sensores de profundidad.
+     — Coloca la ecuación exactamente sobre el plano detectado.
+     — Requiere HTTPS y permiso de cámara.
+
+   MODO 2: DeviceOrientation + Estimación visual
+     — Usa acelerómetro/giroscopio del celular.
+     — Detecta cuándo el celular apunta a una superficie horizontal.
+     — Estima posición por trigonometría con beta (inclinación).
+     — Funciona sin WebXR en todos los Android modernos.
+════════════════════════════════════════ */
+let mode='none';            // 'webxr' | 'orientation'
+let surfaceReady=false;
+let equationPlaced=false;
+
+/* Datos WebXR */
+let xrSession=null;
+let xrViewerSpace=null;
+let xrLocalSpace=null;
+let xrHitSource=null;
+let lastHitPose=null;       // XRRigidTransform del último hit
+
+/* Datos orientación */
+let devBeta=0;              // inclinación adelante-atrás (0=plano, 90=vertical)
+let devAlpha=0;             // rotación brújula
+let devGamma=0;             // inclinación lateral
+let orientPermission=false;
+
+/* Estado de juego */
+let score=0,qNum=1,cur=null;
+
+/* ─── MODO 1: WebXR ─── */
+async function tryWebXR(){
+  if(!navigator.xr) return false;
+  try{
+    const ok=await navigator.xr.isSessionSupported('immersive-ar');
+    if(!ok) return false;
+  }catch(e){ return false; }
+
+  try{
+    xrSession=await navigator.xr.requestSession('immersive-ar',{
+      requiredFeatures:['hit-test','local'],
+      optionalFeatures:['dom-overlay','anchors'],
+      domOverlay:{root:document.body}
+    });
+
+    /* Configurar WebGL layer para WebXR */
+    const gl=renderer.getContext();
+    await gl.makeXRCompatible();
+    xrSession.updateRenderState({
+      baseLayer: new XRWebGLLayer(xrSession, gl)
+    });
+
+    /* Espacios de referencia */
+    xrLocalSpace  = await xrSession.requestReferenceSpace('local');
+    xrViewerSpace = await xrSession.requestReferenceSpace('viewer');
+
+    /* Fuente de hit-test desde el centro de la vista del usuario */
+    xrHitSource=await xrSession.requestHitTestSource({space:xrViewerSpace});
+
+    xrSession.addEventListener('end',()=>{
+      xrSession=null;xrHitSource=null;lastHitPose=null;
+      /* Si la sesión WebXR termina, caer a orientación */
+      mode='orientation';
+      setBadge('orientacion (fallback)');
+      startOrientationMode();
+    });
+
+    mode='webxr';
+    setBadge('WebXR Hit Test');
+    renderer.xr.enabled=true;
+    renderer.xr.setSession(xrSession);
+    /* Ocultar video (WebXR usa su propio pass-through) */
+    video.style.display='none';
+    xrSession.requestAnimationFrame(xrLoop);
+    return true;
+  }catch(e){
+    console.warn('WebXR error:',e);
+    return false;
+  }
+}
+
+/* Loop de animación WebXR */
+function xrLoop(t,frame){
+  if(!xrSession) return;
+  xrSession.requestAnimationFrame(xrLoop);
+
+  if(!xrHitSource||!xrLocalSpace) return;
+
+  /* Hit test */
+  const hits=frame.getHitTestResults(xrHitSource);
+  if(hits.length>0){
+    const hitPose=hits[0].getPose(xrLocalSpace);
+    if(hitPose){
+      lastHitPose=hitPose;
+      if(!equationPlaced){
+        /* Mover el reticle/grupo a la posición del hit */
+        const m=hitPose.transform.matrix;
+        const pos=new THREE.Vector3(m[12],m[13],m[14]);
+        /* Actualizar posición del eqGroup (como preview) */
+        eqGroup.position.copy(pos);
+        /* Orientar según la normal del plano detectado */
+        const quat=new THREE.Quaternion(
+          hitPose.transform.orientation.x,
+          hitPose.transform.orientation.y,
+          hitPose.transform.orientation.z,
+          hitPose.transform.orientation.w
+        );
+        eqGroup.quaternion.copy(quat);
+        /* Rotar para que el texto quede visible (plano horizontal → texto hacia arriba) */
+        eqGroup.rotateX(-Math.PI/2);
+        setSurfaceReady(true);
+      }
+    }
+  }else{
+    if(!equationPlaced) setSurfaceReady(false);
+  }
+
+  renderer.render(scene,camera);
+}
+
+/* ─── MODO 2: DeviceOrientation ─── */
+function startOrientationMode(){
+  mode='orientation';
+  setBadge('Giroscopio');
+
+  /* iOS 13+ requiere permiso explícito */
+  if(typeof DeviceOrientationEvent!=='undefined' &&
+     typeof DeviceOrientationEvent.requestPermission==='function'){
+    /* Crear botón de permiso para iOS */
+    const iosBtn=document.createElement('button');
+    iosBtn.textContent='Permitir movimiento';
+    iosBtn.style.cssText=`position:fixed;bottom:210px;left:50%;transform:translateX(-50%);
+      z-index:15;padding:10px 20px;background:rgba(0,0,0,.8);color:#00d4ff;
+      border:1.5px solid #00d4ff;border-radius:20px;font-family:Orbitron,monospace;
+      font-size:11px;letter-spacing:2px;cursor:pointer;`;
+    document.body.appendChild(iosBtn);
+    iosBtn.onclick=async()=>{
+      try{
+        const r=await DeviceOrientationEvent.requestPermission();
+        if(r==='granted'){
+          window.addEventListener('deviceorientation',onOrient,true);
+          orientPermission=true;
+        }
+      }catch(e){}
+      iosBtn.remove();
+    };
+  }else{
+    window.addEventListener('deviceorientation',onOrient,true);
+    orientPermission=true;
+  }
+  startOrientationRenderLoop();
+}
+
+function onOrient(e){
+  devAlpha=e.alpha||0;
+  devBeta =e.beta ||0;
+  devGamma=e.gamma||0;
+  /*
+    beta:  0°  = celular plano boca arriba
+           90° = celular vertical (mirando hacia adelante)
+    Para apuntar a una mesa el beta suele estar entre 30° y 75°.
+    Para una hoja en el suelo: 0-30°.
+    Consideramos superficie válida: beta entre 20° y 78°.
+  */
+  const ok=devBeta>20 && devBeta<78;
+  if(!equationPlaced) setSurfaceReady(ok);
+}
+
+/* Render loop normal (sin WebXR) */
+function startOrientationRenderLoop(){
+  /* Ajustar rotación de la cámara Three.js según giroscopio */
+  function loop(){
+    requestAnimationFrame(loop);
+
+    if(mode==='orientation' && orientPermission){
+      /*
+        Mapeo: beta (30-75°) → ángulo de visión hacia el suelo.
+        Convertir grados a radianes y aplicar a la cámara.
+        Se invierte para que mirar hacia abajo sea positivo en X.
+      */
+      const betaRad =THREE.MathUtils.degToRad(devBeta -90); // 0 al frente
+      const gammaRad=THREE.MathUtils.degToRad(devGamma);
+
+      /* Rotación Euler ZXY que imita la orientación del dispositivo */
+      camera.rotation.order='YXZ';
+      camera.rotation.x=-betaRad;   // inclinación adelante-atrás
+      camera.rotation.z=-gammaRad;  // inclinación lateral
+      camera.rotation.y=0;
+
+      /* Actualizar posición del objeto si está en modo preview */
+      if(!equationPlaced && surfaceReady){
+        /*
+          Colocar la ecuación delante de la cámara a distancia estimada.
+          La distancia d se estima con: d = alturaOjo / tan(beta)
+          Asumiendo alturaOjo ≈ 0.4m (celular en mano apuntando a mesa)
+        */
+        const betaDeg=Math.max(20,Math.min(devBeta,78));
+        const betaR=THREE.MathUtils.degToRad(betaDeg);
+        const dist=Math.min(0.4/Math.tan(betaR),2.0);
+
+        /* Calcular posición frente a la cámara */
+        const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+        const pos=camera.position.clone().addScaledVector(dir,dist);
+        /* Bajar a la superficie estimada */
+        pos.y-=0.4*Math.sin(betaR);
+        eqGroup.position.copy(pos);
+
+        /* Orientar el plano perpendicular a la normal de la superficie */
+        eqGroup.rotation.copy(camera.rotation);
+        eqGroup.rotateX(-Math.PI/2+betaR*0.3);
+      }
+    }
+
+    renderer.render(scene,camera);
+  }
+  loop();
+}
+
+/* ─── Estado de superficie ─── */
+function setSurfaceReady(ok){
+  if(surfaceReady===ok) return;
+  surfaceReady=ok;
+  const hint   =document.getElementById('surface-hint');
+  const reticle=document.getElementById('reticle');
+  const placeB =document.getElementById('place-btn');
+  const hintTxt=document.getElementById('hint-txt');
+  if(ok){
+    hint.classList.add('detected');
+    hintTxt.innerHTML='SUPERFICIE<br>DETECTADA';
+    reticle.classList.add('show');
+    placeB.classList.add('show');
+  }else{
+    hint.classList.remove('detected');
+    hintTxt.innerHTML='BUSCA UNA<br>SUPERFICIE PLANA';
+    reticle.classList.remove('show');
+    placeB.classList.remove('show');
+  }
+}
+
+/* ════════════════════════════════════════
+   COLOCAR ECUACIÓN SOBRE EL PLANO
+════════════════════════════════════════ */
+function placeEquation(){
+  if(!surfaceReady&&!equationPlaced) return;
+
+  if(mode==='webxr' && lastHitPose){
+    /* Usar la posición exacta del hit-test */
+    const m=lastHitPose.transform.matrix;
+    eqGroup.position.set(m[12],m[13]+0.005,m[14]); // +5mm sobre el plano
+    const q=new THREE.Quaternion(
+      lastHitPose.transform.orientation.x,
+      lastHitPose.transform.orientation.y,
+      lastHitPose.transform.orientation.z,
+      lastHitPose.transform.orientation.w
+    );
+    eqGroup.quaternion.copy(q);
+    eqGroup.rotateX(-Math.PI/2); // rotar para que el texto mire hacia la cámara
+  }
+  /* En modo orientación el grupo ya está posicionado por el loop */
+
+  drawEquation(cur?cur.eq:'7x - 4 = 23');
+  eqGroup.visible=true;
+  equationPlaced=true;
+
+  /* Ocultar controles de búsqueda, mostrar botones */
+  const hint=document.getElementById('surface-hint');
+  hint.style.opacity='0';
+  setTimeout(()=>{hint.style.display='none';},400);
+  document.getElementById('reticle').classList.remove('show');
+  document.getElementById('place-btn').classList.remove('show');
+  document.getElementById('options-panel').style.display='flex';
+}
+
+/* ════════════════════════════════════════
+   LÓGICA DE PREGUNTAS / UI
+════════════════════════════════════════ */
 function loadQuestion(){
-  cur = genExercise();
-  // Actualiza el canvas si ya está colocado
-  if(equationPlaced){ drawEquation(cur.eq); }
-  // Botones
+  cur=genExercise();
+  if(equationPlaced) drawEquation(cur.eq);
   document.querySelectorAll('.opt-btn').forEach((b,i)=>{
     b.textContent=`x = ${cur.opts[i]}`;
     b.className='opt-btn';b.disabled=false;
@@ -699,7 +734,7 @@ function checkAnswer(idx){
   const ok=idx===cur.correct;
   doFlash(ok?'green':'red');
   document.querySelectorAll('.opt-btn')[cur.correct].classList.add('correct');
-  if(!ok)document.querySelectorAll('.opt-btn')[idx].classList.add('wrong');
+  if(!ok) document.querySelectorAll('.opt-btn')[idx].classList.add('wrong');
   score=Math.max(0,score+(ok?10:-5));
   document.getElementById('score-display').textContent=String(score).padStart(3,'0');
   showPopup(ok);
@@ -713,11 +748,11 @@ function doFlash(color){
 }
 
 function showPopup(ok){
-  const pop=document.getElementById('solution-popup');
+  const pop  =document.getElementById('solution-popup');
   const badge=document.getElementById('popup-badge');
   document.getElementById('popup-eq').textContent=cur.eq;
   badge.className=`popup-badge ${ok?'correct':'wrong'}`;
-  badge.textContent=ok?'✓  Correcto  +10':'✗  Incorrecto  -5';
+  badge.textContent=ok?'✓  Correcto  +10':'✗  Incorrecto  −5';
   const list=document.getElementById('step-list');
   list.innerHTML='';
   cur.steps.forEach((s,i)=>{
@@ -730,22 +765,24 @@ function showPopup(ok){
 
 function nextQuestion(){
   qNum++;
-  // Si ya estaba colocada la ecuación, solo actualizar el texto
   loadQuestion();
-  if(equationPlaced) drawEquation(cur.eq);
 }
 
-/* ════════════════════════════════════════════════════════════
+function setBadge(txt){
+  document.getElementById('mode-badge').textContent='modo: '+txt;
+}
+
+/* ════════════════════════════════════════
    INICIO
-════════════════════════════════════════════════════════════ */
-window.addEventListener('DOMContentLoaded', async ()=>{
-  await startCamera();
+════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded',async()=>{
+  const camOk=await startCamera();
+  if(!camOk) return;
   loadQuestion();
 
-  // Intentar WebXR primero
-  const xrOk = await tryWebXR();
+  /* Intentar WebXR primero; si falla, usar giroscopio */
+  const xrOk=await tryWebXR();
   if(!xrOk){
-    // Fallback: orientación del dispositivo
     startOrientationMode();
   }
 });
